@@ -1,6 +1,7 @@
 # PointLoc
 import torch
-from models.PointLoc import PointLoc
+from torch.utils.data import DataLoader
+from models.PointLoc import PointLoc, PointLocLoss
 def main(*args, **kwargs):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -13,8 +14,9 @@ def main(*args, **kwargs):
 
     optimizer = torch.optim.Adam(model.parameters())
     schedular = torch.optim.lr_scheduler.LRScheduler
-    criterion = torch.nn.MSELoss()
+    criterion = PointLocLoss()
     num_epochs = 100
+
     for epoch in range(num_epochs):
         training_one_epoch(model=model, optimizer=optimizer, criterion=criterion, schedular=schedular)
 
@@ -25,6 +27,8 @@ def training_one_epoch(*args, **kwargs):
     criterion = kwargs["criterion"]
 
     model.train()
+
+    for
 
 
 def validation_one_epoch(*args, **kwargs):

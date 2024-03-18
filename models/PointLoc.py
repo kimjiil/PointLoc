@@ -3,11 +3,44 @@ import torch.nn as nn
 from .pointnet2_utils import PointNetSetAbstraction
 import torch.nn.functional as F
 
-class PointLoc(nn.Module):
-    def __init__(self, beta0=1.0, gamma0=1.0):
-        super(PointLoc, self).__init__()
 
-    def forward(self,)
+def quaternion_logarithm(q):
+    """
+    Calculate the logarithm of a quaternion.
+    """
+    q_norm = torch.norm(q[:, 1:], p=2, dim=1, keepdim=True)
+    q_w = q[:, 0].unsqueeze(1)
+    vec_part = q[:, 1:]
+
+    # Avoid division by zero
+    small_q_norm = q_norm < 1e-12
+    q_norm = torch.where(small_q_norm, torch.ones_like(q_norm), q_norm)
+
+    log_q = torch.zeros_like(q)
+    log_q[:, 0] = torch.log(torch.norm(q, p=2, dim=1))
+    log_q[:, 1:] = (vec_part / q_norm) * torch.acos(q_w / torch.norm(q, p=2, dim=1, keepdim=True))
+
+    return log_q
+
+
+class PointLocLoss(nn.Module):
+    def __init__(self, beta0=1.0, gamma0=1.0):
+        super(PointLocLoss, self).__init__()
+        self.beta = nn.Parameter(torch.tensor([beta0]), requires_grad=True)
+        self.gamma = nn.Parameter(torch.tensor([gamma0]), requires_grad=True)
+
+    def forward(self, t_pred, t_gt, q_pred, q_gt):
+        # Translation error
+        t_error = torch.norm(t_pred - t_gt, p=1, dim=1)
+
+        # Quaternion logarithm error for rotation
+        log_q_pred = quaternion_logarithm(q_pred)
+        log_q_gt = quaternion_logarithm(q_gt)
+        q_error = torch.norm(log_q_pred - log_q_gt, p=1, dim=1)
+
+        # PointLoc loss calculation
+        loss = torch.mean(t_error * torch.exp(-self.beta) + self.beta + q_error * torch.exp(-self.gamma) + self.gamma)
+        return loss
 
 class PointLoc(nn.Module):
     def __init__(self):
