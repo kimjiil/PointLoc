@@ -3,10 +3,9 @@ import torch
 from torch.utils import data
 import numpy as np
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
 
 class vReLocDataset(data.Dataset):
-    def __init__(self, root):
+    def __init__(self, root, train=True):
         self.root = os.path.join(root, "full")
 
         train_seq = []
@@ -18,8 +17,8 @@ class vReLocDataset(data.Dataset):
                     train_seq.append(os.path.join(self.root, seq))
 
 
-        pass
 
+        print()
 
     def __len__(self):
         return len()
@@ -112,6 +111,8 @@ def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
     ].reshape(batch_dim + (4,))
     return standardize_quaternion(out)
 
+
+
 if __name__ == '__main__':
     path = "E:/DeepLearning/localization/자료/(2022) PointLoc/vReLoc/full/seq-01/frame-000000.bin"
 
@@ -119,9 +120,7 @@ if __name__ == '__main__':
 
     data = np.fromfile(path, dtype=np.float32)
     ptcld = data.reshape((4, -1)).T
-    ptcld[:, 2]
-    plt.plot(ptcld[:, 0], ptcld[:, 1], 'o', markersize=0.5, color='red')
-    plt.show()
+
 
     import torch
     import numpy as np

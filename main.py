@@ -2,6 +2,7 @@
 import torch
 from torch.utils.data import DataLoader
 from models.PointLoc import PointLoc, PointLocLoss
+from data.dataloader import vReLocDataset
 def main(*args, **kwargs):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -17,18 +18,27 @@ def main(*args, **kwargs):
     criterion = PointLocLoss()
     num_epochs = 100
 
+    train_dataset = vReLocDataset('', train=True)
+    valid_dataset = vReLocDataset(train=False)
+
+    train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=0)
+    valid_loader = DataLoader(valid_dataset, batch_size=1, shuffle=False, num_workers=0)
     for epoch in range(num_epochs):
-        training_one_epoch(model=model, optimizer=optimizer, criterion=criterion, schedular=schedular)
+        training_one_epoch(model=model, optimizer=optimizer, criterion=criterion, schedular=schedular,
+                           dataloader=train_loader)
 
 
 def training_one_epoch(*args, **kwargs):
     model = kwargs["model"]
     optimizer = kwargs["optimizer"]
     criterion = kwargs["criterion"]
+    data_loader = kwargs["dataloader"]
 
     model.train()
 
-    for
+    for _ in enumerate(data_loader):
+
+        pass
 
 
 def validation_one_epoch(*args, **kwargs):
