@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-from .pointnet2_utils import PointNetSetAbstraction
+from .pointnet2_utils import PointNetSetAbstraction as PSA1
+from .flownet3d_utils import PointNetSetAbstraction as PSA2
 import torch.nn.functional as F
 
 
@@ -158,13 +159,13 @@ class SelfAttentionModule(nn.Module):
 class PointCloudEncoder(nn.Module):
     def __init__(self):
         super(PointCloudEncoder, self).__init__()
-        self.SA1 = PointNetSetAbstraction(npoint=2048, radius=0.2, nsample=64,in_channel=3,
+        self.SA1 = PSA2(npoint=2048, radius=0.2, nsample=64,in_channel=3,
                                           mlp=[64, 64, 128], group_all=False)
-        self.SA2 = PointNetSetAbstraction(npoint=1024, radius=0.4, nsample=32,in_channel=128+3,
+        self.SA2 = PSA2(npoint=1024, radius=0.4, nsample=32,in_channel=128+3,
                                           mlp=[128, 128, 256], group_all=False)
-        self.SA3 = PointNetSetAbstraction(npoint=512, radius=0.8, nsample=16, in_channel=256+3,
+        self.SA3 = PSA2(npoint=512, radius=0.8, nsample=16, in_channel=256+3,
                                           mlp=[128, 128, 256], group_all=False)
-        self.SA4 = PointNetSetAbstraction(npoint=256, radius=1.2, nsample=16, in_channel=256+3,
+        self.SA4 = PSA2(npoint=256, radius=1.2, nsample=16, in_channel=256+3,
                                           mlp=[128, 128, 256], group_all=False)
     def forward(self, input):
         xyz, f = self.SA1(input, None)

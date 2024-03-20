@@ -3,29 +3,85 @@ import torch
 from torch.utils import data
 import numpy as np
 import torch.nn.functional as F
+import glob
+import transforms3d.quaternions as txq
+
+
+def qlog(q):
+    if all(q[1:] == 0):
+        q = np.zeros(3)
+    else:
+        q = np.arccos(q[0]) * q[1:] / np.linalg.norm(q[1:])
+    return q
+
+def process_poses(poses_in, mean_t=np.array([0.0, 0.0, 0.0]),
+                  std_t=np.array([1.0, 1.0, 1.0]),
+                  align_R=np.eye(3),
+                  align_t=np.array([1.0, 1.0, 1.0]),
+                  align_s=1):
+
+    poses_out = np.zeros((len(poses_in), 6))
+    poses_out[:, 0:3] = poses_in[:, [3, 7, 11]]
+
+  # align
+    for i in range(len(poses_out)):
+        R = poses_in[i].reshape((3, 4))[:3, :3]
+        q = txq.mat2quat(np.dot(align_R, R))
+        q *= np.sign(q[0])  # constrain to hemisphere
+        q = qlog(q)
+        poses_out[i, 3:] = q
+        t = poses_out[i, :3] - align_t
+        poses_out[i, :3] = align_s * np.dot(align_R, t[:, np.newaxis]).squeeze()
+
+    # normalize translation
+    poses_out[:, :3] -= mean_t
+    poses_out[:, :3] /= std_t
+    return poses_out
 
 class vReLocDataset(data.Dataset):
-    def __init__(self, root, train=True):
+    def __init__(self, root, train=True, transform=None):
         self.root = os.path.join(root, "full")
+        self.transform = transform
 
-        train_seq = []
-        with open(os.path.join(self.root, "TrainSplit.txt"), 'r', encoding='utf-8') as txt_f:
+        txt_file = "TrainSplit.txt" if train else "TestSplit.txt"
+
+        seqs = []
+        with open(os.path.join(self.root, txt_file), 'r', encoding='utf-8') as txt_f:
             for line in txt_f:
                 if not '#' in line:
                     seq = line.replace("\n", "")
                     seq = seq[:3] + "-" + seq[8:].rjust(2, "0")
-                    train_seq.append(os.path.join(self.root, seq))
+                    seqs.append(os.path.join(self.root, seq))
 
+        self.frames = []
+        self.poses = np.empty((0, 6))
+        for seq in seqs:
+            ps = []
+            for bin_file_path in glob.glob(os.path.join(seq, "*.bin")):
+                lidar_file = np.fromfile(bin_file_path, dtype=np.float32).reshape((4, -1))[:3, :]
+                pose = np.loadtxt(bin_file_path.replace(".bin", ".pose.txt"), delimiter=",") # homogenous coordinate
+                pose = pose.flatten()[:12]
+                ps.append(pose)
+                self.frames.append(lidar_file)
 
+            ps = np.array(ps)
+            pss = process_poses(ps)
+            self.poses = np.vstack((self.poses, pss))
 
+            print()
         print()
 
     def __len__(self):
-        return len()
+        return len(self.poses)
 
     def __getitem__(self, idx):
+        frame = self.frames[idx]
+        pose = self.poses[idx]
 
-        return None
+        if self.transform is not None:
+            frame = self.transform(frame)
+
+        return frame, pose
 
 def _sqrt_positive_part(x: torch.Tensor) -> torch.Tensor:
     """
