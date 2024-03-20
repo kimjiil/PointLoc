@@ -68,8 +68,6 @@ class vReLocDataset(data.Dataset):
             pss = process_poses(ps)
             self.poses = np.vstack((self.poses, pss))
 
-            print()
-        print()
 
     def __len__(self):
         return len(self.poses)
