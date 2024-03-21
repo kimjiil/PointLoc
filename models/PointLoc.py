@@ -43,6 +43,10 @@ class PointLocLoss(nn.Module):
         loss = torch.mean(t_error * torch.exp(-self.beta) + self.beta + q_error * torch.exp(-self.gamma) + self.gamma)
         return loss
 
+    def __str__(self):
+        return f"PointLoc Loss beta: {round(self.beta.item(), 7)} / gamma: {round(self.gamma.item(), 7)}"
+        # print(f"PointLoc Loss beta: {round(self.beta.item(), 7)} / gamma: {round(self.gamma.item(), 7)}")
+
 class PointLoc(nn.Module):
     def __init__(self):
         super(PointLoc, self).__init__()
