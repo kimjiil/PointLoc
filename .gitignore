@@ -5,3 +5,5 @@
 /models/lib/build
 /models/lib/pointnet2.egg-info
 /models/lib/dist
+*.pt
+/results
