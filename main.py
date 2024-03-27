@@ -7,7 +7,7 @@ from data.transforms import get_train_transforms, get_valid_transforms
 from torch.autograd import profiler
 
 from utils.quaternions import qexp, quaternion_angular_error
-from utils.tools import Options
+from utils.tools import Options, Ploting, DualOutput, pose_ploting
 
 import numpy as np
 from itertools import chain
@@ -16,81 +16,6 @@ from datetime import datetime
 from collections import defaultdict
 
 import matplotlib.pyplot as plt
-
-
-class Ploting:
-    def __init__(self):
-        self.epochs = []
-        self.valid_loss = []
-        self.train_loss = []
-        self.train_translation_error = []
-        self.valid_translation_error = []
-        self.train_rotation_error = []
-        self.valid_rotation_error = []
-
-    def plot_save(self, *args, **kwargs):
-        checkpoint_dict = kwargs['checkpoint_dict']
-
-        self.epochs.append(checkpoint_dict['epoch'])
-        self.valid_loss.append(checkpoint_dict['valid_loss'])
-        self.train_loss.append(checkpoint_dict['train_loss'])
-        self.train_translation_error.append(checkpoint_dict['train_translation_error'])
-        self.valid_translation_error.append(checkpoint_dict['valid_translation_error'])
-        self.train_rotation_error.append(checkpoint_dict['train_rotation_error'])
-        self.valid_rotation_error.append(checkpoint_dict['valid_rotation_error'])
-
-        best_epoch = kwargs['best_epoch']
-        best_valid_loss = kwargs['best_valid_loss']
-        best_valid_rotate = kwargs['best_valid_rotate']
-        best_valid_trans = kwargs['best_valid_trans']
-
-        plt.figure(figsize=(18, 6))
-
-        plt.subplot(1, 3, 1)
-        plt.text(best_epoch, best_valid_loss, f"best E{best_epoch} - {round(best_valid_loss, 6)}")
-        plt.plot(self.epochs, self.train_loss, label='Train Loss', marker='o')
-        plt.plot(self.epochs, self.valid_loss, label='Valid Loss', marker='o')
-        plt.title('Training and Validation Loss')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend()
-
-        # 이동 오류(Translation Error) 시각화
-        plt.subplot(1, 3, 2)
-        plt.text(best_epoch, best_valid_trans, f"best E{best_epoch} - {round(best_valid_trans, 5)}")
-        plt.plot(self.epochs, self.train_translation_error, label='Train Translation Error', marker='o')
-        plt.plot(self.epochs, self.valid_translation_error, label='Valid Translation Error', marker='o')
-        plt.title('Training and Validation Translation Error')
-        plt.xlabel('Epoch')
-        plt.ylabel('Translation Error (units)')
-        plt.legend()
-
-        # 회전 오류(Rotation Error) 시각화
-        plt.subplot(1, 3, 3)
-        plt.text(best_epoch, best_valid_rotate, f"best E{best_epoch} - {round(best_valid_rotate)}")
-        plt.plot(self.epochs, self.train_rotation_error, label='Train Rotation Error', marker='o')
-        plt.plot(self.epochs, self.valid_rotation_error, label='Valid Rotation Error', marker='o')
-        plt.title('Training and Validation Rotation Error')
-        plt.xlabel('Epoch')
-        plt.ylabel('Rotation Error (degrees)')
-        plt.legend()
-
-        plt.tight_layout()
-        plt.savefig(os.path.join(save_dir, "plot.png"))
-
-class DualOutput:
-    def __init__(self, filename):
-        self.terminal = sys.stdout
-        self.log = open(filename, "a")
-
-    def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)
-
-    def flush(self): # 필요한 경우, 출력 버퍼를 flush하는 데 사용
-        # 이 메소드는 print 함수가 파일과 터미널에 출력한 후 버퍼를 비우는 데 필요합니다.
-        self.terminal.flush()
-        self.log.flush()
 
 current_time = datetime.now().strftime("%Y_%m%d_%H%M_%S")
 os.makedirs("./results", exist_ok=True)
@@ -161,7 +86,8 @@ def main(*args, **kwargs):
                        best_epoch=best_epoch,
                        best_valid_trans=best_valid_trans,
                        best_valid_rotate=best_valid_rotate,
-                       best_valid_loss=best_valid_loss)
+                       best_valid_loss=best_valid_loss,
+                       save_dir=save_dir)
 
 
 def training_one_epoch(*args, **kwargs):
@@ -186,6 +112,10 @@ def training_one_epoch(*args, **kwargs):
     pred_poses = []
     target_poses = []
     loss_list = []
+
+    pred_pose_list = []
+    gt_pose_list = []
+
     for batch_idx, (frame, gt_pose) in enumerate(data_loader):
         frame = frame.to(device)
         gt_pose = gt_pose.to(device)
@@ -201,9 +131,9 @@ def training_one_epoch(*args, **kwargs):
         else:
             output = model(frame)
 
+
         loss = criterion(t_pred=output[:, :3], t_gt=gt_pose[:, :3],
                          q_pred=output[:, 3:], q_gt=gt_pose[:, 3:])
-
 
         loss.backward()
         optimizer.step()
@@ -229,6 +159,10 @@ def training_one_epoch(*args, **kwargs):
             .format(np.mean(t_loss), np.mean(q_loss)))
         print('============================================================')
 
+        gt_pose_list.extend(gt_pose[:, :3])
+        pred_pose_list.extend(output[:, :3])
+
+    pose_ploting(pred_pose_list, gt_pose_list, epoch, save_dir, mode="train")
     print("*****************************************************************")
     print(f"Epoch {epoch} Total Training Loss : {np.mean(loss_list)}")
     target_poses = np.asarray(target_poses)
@@ -291,6 +225,7 @@ def validation_one_epoch(*args, **kwargs):
     pred_poses = np.asarray(pred_poses)
     target_poses = np.asarray(target_poses)
 
+    pose_ploting(pred_poses[:, :3], target_poses[:, :3], epoch, save_dir, mode="valid")
     t_loss = np.asarray([t_criterion(p, t) for p, t in zip(pred_poses[:, :3], target_poses[:, :3])])
     q_loss = np.asarray([q_criterion(p, t) for p, t in zip(pred_poses[:, 3:], target_poses[:, 3:])])
 

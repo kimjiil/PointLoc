@@ -28,7 +28,8 @@ class vReLocDataset(data.Dataset):
         self.size_list = []
         for seq in seqs:
             ps = []
-            for bin_file_path in glob.glob(os.path.join(seq, "*.bin")):
+            bin_list = sorted(glob.glob(os.path.join(seq, "*.bin")), key=lambda x: int(x.split("frame")[-1].replace("-", "").replace(".bin", "")))
+            for bin_file_path in bin_list:
                 lidar_file = np.fromfile(bin_file_path, dtype=np.float32).reshape((4, -1))[:3, :]
                 self.size_list.append(lidar_file.shape[-1])
                 pose = np.loadtxt(bin_file_path.replace(".bin", ".pose.txt"), delimiter=",") # homogenous coordinate

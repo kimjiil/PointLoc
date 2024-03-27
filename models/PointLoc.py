@@ -4,6 +4,7 @@ from .pointnet2_utils import PointNetSetAbstraction as PSA1
 from .flownet3d_utils import PointNetSetAbstraction as PSA2
 import torch.nn.functional as F
 
+import matplotlib.pyplot as plt
 
 def quaternion_logarithm(q):
     """
@@ -113,21 +114,21 @@ class GroupAllLayersModule(nn.Module):
 
         self.mlp = nn.Sequential(
             nn.Conv1d(in_channels=256, out_channels=256, kernel_size=1),
-            nn.BatchNorm1d(256),
+            # nn.BatchNorm1d(256),
             nn.ReLU(inplace=True),
-            nn.Dropout(0.4),
+            # nn.Dropout(0.4),
             nn.Conv1d(in_channels=256, out_channels=256, kernel_size=1),
-            nn.BatchNorm1d(256),
+            # nn.BatchNorm1d(256),
             nn.ReLU(inplace=True),
-            nn.Dropout(0.4),
+            # nn.Dropout(0.4),
             nn.Conv1d(in_channels=256, out_channels=512, kernel_size=1),
-            nn.BatchNorm1d(512),
+            # nn.BatchNorm1d(512),
             nn.ReLU(inplace=True),
-            nn.Dropout(0.4),
+            # nn.Dropout(0.4),
             nn.Conv1d(in_channels=512, out_channels=1024, kernel_size=1),
-            nn.BatchNorm1d(1024),
+            # nn.BatchNorm1d(1024),
             nn.ReLU(inplace=True),
-            nn.Dropout(0.4)
+            # nn.Dropout(0.4)
         )
         self.fc_layer = nn.Linear(in_features=1024, out_features=1024)
 
@@ -172,8 +173,15 @@ class PointCloudEncoder(nn.Module):
         self.SA4 = PSA2(npoint=256, radius=1.2, nsample=16, in_channel=256+3,
                                           mlp=[128, 128, 256], group_all=False)
     def forward(self, input):
+
+        # input_t = input.detach().cpu().numpy()[0]
+        # plt.plot(input_t[0, :], input_t[1, :], 'o', markersize=1, color='green')
         xyz, f = self.SA1(input, None)
+        # xyz_t = xyz.detach().cpu().numpy()[0].reshape(3, -1)
+        # plt.plot(xyz_t[0, :], xyz_t[1, :], 'o', markersize=1, color='red')
         xyz, f = self.SA2(xyz, f)
+        # xyz_t = xyz.detach().cpu().numpy()[0].reshape(3, -1)
+        # plt.plot(xyz_t[0, :], xyz_t[1, :], 'o', markersize=1, color='blue')
         xyz, f = self.SA3(xyz, f)
         xyz, f = self.SA4(xyz, f)
         return xyz, f
