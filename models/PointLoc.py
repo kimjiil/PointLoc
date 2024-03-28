@@ -45,6 +45,7 @@ class PointLocLoss(nn.Module):
         return loss
 
     def __str__(self):
+        "test"
         return f"PointLoc Loss beta: {round(self.beta.item(), 7)} / gamma: {round(self.gamma.item(), 7)}"
         # print(f"PointLoc Loss beta: {round(self.beta.item(), 7)} / gamma: {round(self.gamma.item(), 7)}")
 
