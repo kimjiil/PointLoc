@@ -40,6 +40,8 @@ def main(*args, **kwargs):
     optimizer = torch.optim.Adam(params, lr=opt.lr)
     if opt.scheduler == 'CALR':
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=50)
+    elif opt.scheduler == "steplr":
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=10, gamma=0.97)
     else:
         scheduler = None
 
