@@ -76,15 +76,15 @@ class PoseRegressor(nn.Module):
         self.translation_mlp = nn.Sequential(
             nn.Linear(1024, 512),
             nn.BatchNorm1d(512),
-            nn.LeakyReLU(0.02, inplace=True),
+            nn.LeakyReLU(0.1, inplace=True),
             # nn.Dropout(0.4),
             nn.Linear(512, 128),
             nn.BatchNorm1d(128),
-            nn.LeakyReLU(0.02, inplace=True),
+            nn.LeakyReLU(0.1, inplace=True),
             # nn.Dropout(0.4),
             nn.Linear(128, 64),
             nn.BatchNorm1d(64),
-            nn.LeakyReLU(0.02, inplace=True),
+            nn.LeakyReLU(0.1, inplace=True),
             # nn.Dropout(0.4),
             nn.Linear(64, 3)
         )
@@ -92,15 +92,15 @@ class PoseRegressor(nn.Module):
         self.rotation_mlp = nn.Sequential(
             nn.Linear(1024, 512),
             nn.BatchNorm1d(512),
-            nn.LeakyReLU(0.02, inplace=True),
+            nn.LeakyReLU(0.1, inplace=True),
             # nn.Dropout(0.4),
             nn.Linear(512, 128),
             nn.BatchNorm1d(128),
-            nn.LeakyReLU(0.02, inplace=True),
+            nn.LeakyReLU(0.1, inplace=True),
             # nn.Dropout(0.4),
             nn.Linear(128, 64),
             nn.BatchNorm1d(64),
-            nn.LeakyReLU(0.02, inplace=True),
+            nn.LeakyReLU(0.1, inplace=True),
             # nn.Dropout(0.4),
             nn.Linear(64, 3)
         )
@@ -116,19 +116,19 @@ class GroupAllLayersModule(nn.Module):
         self.mlp = nn.Sequential(
             nn.Conv1d(in_channels=256, out_channels=256, kernel_size=1),
             nn.BatchNorm1d(256),
-            nn.LeakyReLU(0.02, inplace=True),
+            nn.LeakyReLU(0.1, inplace=True),
             # nn.Dropout(0.4),
             nn.Conv1d(in_channels=256, out_channels=256, kernel_size=1),
             nn.BatchNorm1d(256),
-            nn.LeakyReLU(0.02, inplace=True),
+            nn.LeakyReLU(0.1, inplace=True),
             # nn.Dropout(0.4),
             nn.Conv1d(in_channels=256, out_channels=512, kernel_size=1),
             nn.BatchNorm1d(512),
-            nn.LeakyReLU(0.02, inplace=True),
+            nn.LeakyReLU(0.1, inplace=True),
             # nn.Dropout(0.4),
             nn.Conv1d(in_channels=512, out_channels=1024, kernel_size=1),
             nn.BatchNorm1d(1024),
-            nn.LeakyReLU(0.02, inplace=True),
+            nn.LeakyReLU(0.1, inplace=True),
             # nn.Dropout(0.4)
         )
         self.fc_layer = nn.Linear(in_features=1024, out_features=1024)
