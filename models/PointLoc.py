@@ -36,9 +36,9 @@ class PointLocLoss(nn.Module):
         t_error = torch.norm(t_pred - t_gt, p=1, dim=1)
 
         # Quaternion logarithm error for rotation
-        log_q_pred = quaternion_logarithm(q_pred)
-        log_q_gt = quaternion_logarithm(q_gt)
-        q_error = torch.norm(log_q_pred - log_q_gt, p=1, dim=1)
+        # log_q_pred = quaternion_logarithm(q_pred)
+        # log_q_gt = quaternion_logarithm(q_gt)
+        q_error = torch.norm(q_pred - q_gt, p=1, dim=1)
 
         # PointLoc loss calculation
         loss = torch.mean(t_error * torch.exp(-self.beta) + self.beta + q_error * torch.exp(-self.gamma) + self.gamma)

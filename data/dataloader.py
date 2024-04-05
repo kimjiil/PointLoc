@@ -7,6 +7,44 @@ import glob
 from utils.quaternions import process_poses
 
 
+class SyswinDataset(data.Dataset):
+    def __init__(self, root, train=True, transform=None):
+        self.root = root
+        self.transform = transform
+
+        txt_file = "TrainSplit.txt" if train else "TestSplit.txt"
+
+        seqs = []
+        with open(os.path.join(self.root, txt_file), 'r', encoding='utf-8') as txt_f:
+            for line in txt_f:
+                if not '#' in line:
+                    seq = line.replace("\n", "")
+                    seqs.append(os.path.join(self.root, seq))
+
+        self.frames = []
+        for seq in seqs:
+            scan_data_list = glob.glob(os.path.join(seq, "*_scan.txt"))
+            for scan_data in scan_data_list:
+                lidar_data = self.get_scan_data(scan_data)
+
+    def get_scan_data(self, scan_path):
+        print()
+        with open(scan_path, 'r', encoding='utf-8') as txt_f:
+            lines = txt_f.readlines()
+            angle_min = float(lines[1].split(" ")[-1].replace("\n", ""))
+            angle_max = float(lines[2].split(" ")[-1].replace("\n", ""))
+            angle_step = float(lines[3].split(" ")[-1].replace("\n", ""))
+            global_pose = [float(s.replace(",", "").replace("\n", "")) for s in lines[6].split(" ")[-3:]]
+            distance = [float(s.replace(",", "").replace(" ", "")) for s in lines[8].split(" ") if len(s) > 1]
+
+            angles_arr = [angle_min + angle_step * i for i in range(len(distance))]
+            coordinates = [[d * np.cos(rad), d * np.sin(rad)] for rad, d in zip(angles_arr, distance) if not np.isinf(d)]
+            print()
+    def __len__(self):
+        pass
+
+    def __getitem__(self, idx):
+        pass
 
 class vReLocDataset(data.Dataset):
     def __init__(self, root, train=True, transform=None):
@@ -26,6 +64,7 @@ class vReLocDataset(data.Dataset):
         self.frames = []
         self.poses = np.empty((0, 6))
         self.size_list = []
+        self.rot_mat = []
         for seq in seqs:
             ps = []
             bin_list = sorted(glob.glob(os.path.join(seq, "*.bin")), key=lambda x: int(x.split("frame")[-1].replace("-", "").replace(".bin", "")))
@@ -33,13 +72,17 @@ class vReLocDataset(data.Dataset):
                 lidar_file = np.fromfile(bin_file_path, dtype=np.float32).reshape((4, -1))[:3, :]
                 self.size_list.append(lidar_file.shape[-1])
                 pose = np.loadtxt(bin_file_path.replace(".bin", ".pose.txt"), delimiter=",") # homogenous coordinate
+                self.rot_mat.append(pose[:3, :3])
                 pose = pose.flatten()[:12]
                 ps.append(pose)
                 self.frames.append(lidar_file)
 
+
             ps = np.array(ps)
             pss = process_poses(ps)
             self.poses = np.vstack((self.poses, pss))
+
+        print()
 
 
 
@@ -50,11 +93,11 @@ class vReLocDataset(data.Dataset):
     def __getitem__(self, idx):
         frame = self.frames[idx]
         pose = self.poses[idx]
-
+        rot_mat = self.rot_mat[idx]
         if self.transform is not None:
             frame = self.transform(frame)
 
-        return frame, pose
+        return frame, pose, rot_mat
 
 def _sqrt_positive_part(x: torch.Tensor) -> torch.Tensor:
     """

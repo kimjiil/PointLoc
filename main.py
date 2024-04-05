@@ -2,7 +2,7 @@
 import torch
 from torch.utils.data import DataLoader
 from models.PointLoc import PointLoc, PointLocLoss
-from data.dataloader import vReLocDataset
+from data.dataloader import vReLocDataset, SyswinDataset
 from data.transforms import get_train_transforms, get_valid_transforms
 from torch.autograd import profiler
 
@@ -47,10 +47,15 @@ def main(*args, **kwargs):
 
     train_transforms = get_train_transforms()
     valid_transforms = get_valid_transforms()
-
+    # debugging
+    opt.dataset = 'vReLoc'
     data_path = os.path.join(opt.data_dir, opt.dataset)
-    train_dataset = vReLocDataset(data_path, train=True, transform=train_transforms)
-    valid_dataset = vReLocDataset(data_path, train=False, transform=valid_transforms)
+    if opt.dataset == 'vReLoc':
+        train_dataset = vReLocDataset(data_path, train=True, transform=train_transforms)
+        valid_dataset = vReLocDataset(data_path, train=False, transform=valid_transforms)
+    elif opt.dataset == 'syswin':
+        train_dataset = SyswinDataset(data_path, train=True, transform=train_transforms)
+        valid_dataset = SyswinDataset(data_path, train=False, transform=valid_transforms)
 
     train_loader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
     valid_loader = DataLoader(valid_dataset, batch_size=1, shuffle=False, num_workers=opt.num_workers)
@@ -118,7 +123,7 @@ def training_one_epoch(*args, **kwargs):
     pred_pose_list = []
     gt_pose_list = []
 
-    for batch_idx, (frame, gt_pose) in enumerate(data_loader):
+    for batch_idx, (frame, gt_pose, rot) in enumerate(data_loader):
         frame = frame.to(device)
         gt_pose = gt_pose.to(device)
         optimizer.zero_grad()
@@ -206,7 +211,7 @@ def validation_one_epoch(*args, **kwargs):
     target_poses = []
     loss_list = []
     with torch.no_grad():
-        for batch_idx, (data, target) in enumerate(dataloader):
+        for batch_idx, (data, target, rot) in enumerate(dataloader):
             data, target = data.to(device), target.to(device)
 
             output = model(data)
