@@ -4,7 +4,7 @@ from torch.utils import data
 import numpy as np
 import torch.nn.functional as F
 import glob
-from utils.quaternions import process_poses
+from utils.quaternions import process_poses, qlog
 
 
 class SyswinDataset(data.Dataset):
@@ -22,13 +22,18 @@ class SyswinDataset(data.Dataset):
                     seqs.append(os.path.join(self.root, seq))
 
         self.frames = []
+        self.poses = []
         for seq in seqs:
             scan_data_list = glob.glob(os.path.join(seq, "*_scan.txt"))
             for scan_data in scan_data_list:
-                lidar_data = self.get_scan_data(scan_data)
+                lidar_data, pose = self.get_scan_data(scan_data)
+                self.frames.append(lidar_data)
+                self.poses.append(pose)
+
+        self.poses = np.asanyarray(self.poses)
+
 
     def get_scan_data(self, scan_path):
-        print()
         with open(scan_path, 'r', encoding='utf-8') as txt_f:
             lines = txt_f.readlines()
             angle_min = float(lines[1].split(" ")[-1].replace("\n", ""))
@@ -38,13 +43,26 @@ class SyswinDataset(data.Dataset):
             distance = [float(s.replace(",", "").replace(" ", "")) for s in lines[8].split(" ") if len(s) > 1]
 
             angles_arr = [angle_min + angle_step * i for i in range(len(distance))]
-            coordinates = [[d * np.cos(rad), d * np.sin(rad)] for rad, d in zip(angles_arr, distance) if not np.isinf(d)]
-            print()
+            coordinates = [[d * np.cos(rad), d * np.sin(rad), 0] for rad, d in zip(angles_arr, distance) if not np.isinf(d)]
+            # translation = [global_pose[0], global_pose[1], 0]
+            rad = np.radians(global_pose[2])
+            q_v = np.array([np.cos(rad / 2), 0, 0, np.sin(rad / 2)]) #quaternion vector
+            q_v *= np.sign(q_v[0])
+            q_v = qlog(q_v)
+
+        return np.asanyarray(coordinates).T, [global_pose[0], global_pose[1], 0.0, *q_v]
+
     def __len__(self):
-        pass
+        return len(self.poses)
 
     def __getitem__(self, idx):
-        pass
+        frame = self.frames[idx]
+        pose = self.poses[idx]
+        # rot_mat = self.rot_mat[idx]
+        if self.transform is not None:
+            frame = self.transform(frame)
+
+        return frame, pose, np.zeros((3, 3))
 
 class vReLocDataset(data.Dataset):
     def __init__(self, root, train=True, transform=None):
@@ -77,18 +95,13 @@ class vReLocDataset(data.Dataset):
                 ps.append(pose)
                 self.frames.append(lidar_file)
 
-
             ps = np.array(ps)
             pss = process_poses(ps)
             self.poses = np.vstack((self.poses, pss))
 
-        print()
-
-
 
     def __len__(self):
         return len(self.poses)
-        # return 128
 
     def __getitem__(self, idx):
         frame = self.frames[idx]

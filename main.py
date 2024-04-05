@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from models.PointLoc import PointLoc, PointLocLoss
 from data.dataloader import vReLocDataset, SyswinDataset
-from data.transforms import get_train_transforms, get_valid_transforms
+from data.transforms import get_train_transforms_vReLoc, get_valid_transforms_vReLoc, get_train_transforms_syswin, get_valid_transforms_syswin
 from torch.autograd import profiler
 
 from utils.quaternions import qexp, quaternion_angular_error
@@ -45,15 +45,20 @@ def main(*args, **kwargs):
     else:
         scheduler = None
 
-    train_transforms = get_train_transforms()
-    valid_transforms = get_valid_transforms()
+
+
     # debugging
-    opt.dataset = 'vReLoc'
+    # opt.dataset = 'vReLoc'
+
     data_path = os.path.join(opt.data_dir, opt.dataset)
     if opt.dataset == 'vReLoc':
+        train_transforms = get_train_transforms_vReLoc()
+        valid_transforms = get_valid_transforms_vReLoc()
         train_dataset = vReLocDataset(data_path, train=True, transform=train_transforms)
         valid_dataset = vReLocDataset(data_path, train=False, transform=valid_transforms)
     elif opt.dataset == 'syswin':
+        train_transforms = get_train_transforms_syswin()
+        valid_transforms = get_valid_transforms_syswin()
         train_dataset = SyswinDataset(data_path, train=True, transform=train_transforms)
         valid_dataset = SyswinDataset(data_path, train=False, transform=valid_transforms)
 

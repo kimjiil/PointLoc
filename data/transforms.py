@@ -77,7 +77,7 @@ class ToTensor(object):
     def __call__(self, input):
         return torch.from_numpy(input.astype(np.float32))
 
-def get_train_transforms():
+def get_train_transforms_vReLoc():
     tf = transforms.Compose([
         RandomSampling(55000),
         # RandomSamplingRatio(ratio=0.9),
@@ -89,9 +89,29 @@ def get_train_transforms():
 
     return tf
 
-def get_valid_transforms():
+def get_valid_transforms_vReLoc():
     tf = transforms.Compose([
         RandomSampling(55000),
+        ToTensor()
+    ])
+
+    return tf
+
+def get_train_transforms_syswin():
+    tf = transforms.Compose([
+        RandomSampling(800),
+        # RandomSamplingRatio(ratio=0.9),
+        Randomjitter(sigma=0.01, clip=0.05),
+        # RandomRotation(),
+        # RandomTranslation(),
+        ToTensor()
+    ])
+
+    return tf
+
+def get_valid_transforms_syswin():
+    tf = transforms.Compose([
+        RandomSampling(800),
         ToTensor()
     ])
 
