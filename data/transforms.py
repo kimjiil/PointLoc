@@ -99,7 +99,7 @@ def get_valid_transforms_vReLoc():
 
 def get_train_transforms_syswin():
     tf = transforms.Compose([
-        RandomSampling(800),
+        RandomSampling(750),
         # RandomSamplingRatio(ratio=0.9),
         Randomjitter(sigma=0.01, clip=0.05),
         # RandomRotation(),
@@ -111,7 +111,7 @@ def get_train_transforms_syswin():
 
 def get_valid_transforms_syswin():
     tf = transforms.Compose([
-        RandomSampling(800),
+        # RandomSampling(790),
         ToTensor()
     ])
 
