@@ -11,7 +11,6 @@ class SyswinDataset(data.Dataset):
     def __init__(self, root, train=True, transform=None):
         self.root = root
         self.transform = transform
-
         txt_file = "TrainSplit.txt" if train else "TestSplit.txt"
 
         seqs = []
@@ -32,7 +31,6 @@ class SyswinDataset(data.Dataset):
 
         self.poses = np.asanyarray(self.poses)
 
-
     def get_scan_data(self, scan_path):
         with open(scan_path, 'r', encoding='utf-8') as txt_f:
             lines = txt_f.readlines()
@@ -44,6 +42,7 @@ class SyswinDataset(data.Dataset):
 
             angles_arr = [angle_min + angle_step * i for i in range(len(distance))]
             coordinates = [[d * np.cos(rad), d * np.sin(rad), 0] for rad, d in zip(angles_arr, distance) if not np.isinf(d)]
+
             # translation = [global_pose[0], global_pose[1], 0]
             rad = np.radians(global_pose[2])
             q_v = np.array([np.cos(rad / 2), 0, 0, np.sin(rad / 2)]) #quaternion vector
