@@ -19,6 +19,7 @@ class Options():
         self.parser.add_argument("--gpu_id", type=int, default=0)
         self.parser.add_argument("--memory_profile", type=bool, default=False)
         self.parser.add_argument('--scheduler', type=str, default=None)
+        self.parser.add_argument('--resume', type=str, default=None)
         self.opt = self.parser.parse_args()
 
     def parse_args(self):
@@ -26,7 +27,13 @@ class Options():
 
 
 class Ploting:
-    def __init__(self):
+    def __init__(self, save_dir):
+        self.save_dir = save_dir
+        self.save_fig_path = os.path.join(self.save_dir, 'plot.png')
+        i = 0
+        while os.path.exists(self.save_fig_path): # 파일이 있으면
+            self.save_fig_path = os.path.join(self.save_dir, f'plot{i}.png')
+            i += 1
         self.epochs = []
         self.valid_loss = []
         self.train_loss = []
@@ -37,7 +44,6 @@ class Ploting:
 
     def plot_save(self, *args, **kwargs):
         checkpoint_dict = kwargs['checkpoint_dict']
-        save_dir = kwargs['save_dir']
         self.epochs.append(checkpoint_dict['epoch'])
         self.valid_loss.append(checkpoint_dict['valid_loss'])
         self.train_loss.append(checkpoint_dict['train_loss'])
@@ -83,7 +89,7 @@ class Ploting:
         plt.legend()
 
         plt.tight_layout()
-        plt.savefig(os.path.join(save_dir, "plot.png"))
+        plt.savefig(self.save_fig_path)
 
 class DualOutput:
     def __init__(self, filename):

@@ -15,40 +15,54 @@ import os, sys
 from datetime import datetime
 from collections import defaultdict
 
+import gc
 import matplotlib.pyplot as plt
 
-current_time = datetime.now().strftime("%Y_%m%d_%H%M_%S")
-os.makedirs("./results", exist_ok=True)
-os.makedirs(f"./results/{current_time}", exist_ok=True)
-save_dir = f"./results/{current_time}"
 
-file_name = os.path.join(save_dir, f"logs_{current_time}.txt")
-sys.stdout = DualOutput(file_name)
 
 def main(*args, **kwargs):
     opt = Options().parse_args()
 
-    plot = Ploting()
-    # temp = torch.load('/home/jikim/workspace/localization_ws/PointLoc/results/2024_0321_1916_36/model_E0050.pt')
     device = f"cuda:{opt.gpu_id}" if torch.cuda.is_available() else "cpu"
+    epoch = 0
 
+    if opt.resume:
+        state_dict = torch.load(os.path.join(opt.resume, 'best_model.pt'), map_location=device)
+        epoch = state_dict['epoch'] + 1
+        save_dir = opt.resume
+        current_time = datetime.now().strftime("%Y_%m%d_%H%M_%S")
+        file_name = os.path.join(save_dir, f"logs_{current_time}.txt")
+        sys.stdout = DualOutput(file_name)
+    else:
+        current_time = datetime.now().strftime("%Y_%m%d_%H%M_%S")
+        os.makedirs("./results", exist_ok=True)
+        os.makedirs(f"./results/{current_time}", exist_ok=True)
+        save_dir = f"./results/{current_time}"
+        file_name = os.path.join(save_dir, f"logs_{current_time}.txt")
+        sys.stdout = DualOutput(file_name)
+
+    plot = Ploting(save_dir)
     model = PointLoc()
     criterion = PointLocLoss(beta0=0.0, gamma0=-3.0)
+    if opt.resume:
+        model.load_state_dict(state_dict['model'])
+        criterion.load_state_dict(state_dict['criterion'])
+
+    criterion.to(device)
+    model.to(device)
 
     params = chain(model.parameters(), criterion.parameters())
 
     optimizer = torch.optim.Adam(params, lr=opt.lr)
+    if opt.resume:
+        optimizer.load_state_dict(state_dict['optimizer'])
+
     if opt.scheduler == 'CALR':
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=50)
     elif opt.scheduler == "steplr":
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=10, gamma=0.97)
     else:
         scheduler = None
-
-
-
-    # debugging
-    # opt.dataset = 'vReLoc'
 
     data_path = os.path.join(opt.data_dir, opt.dataset)
     if opt.dataset == 'vReLoc':
@@ -65,17 +79,14 @@ def main(*args, **kwargs):
     train_loader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
     valid_loader = DataLoader(valid_dataset, batch_size=1, shuffle=False, num_workers=opt.num_workers)
 
-    criterion.to(device)
-    model.to(device)
+
 
     best_valid_loss = 1000
     best_valid_rotate = 360
     best_valid_trans = 20
     best_epoch = 0
-
-    for epoch in range(opt.epochs):
-        checkpoint_dict = defaultdict()
-
+    checkpoint_dict = defaultdict()
+    for epoch in range(epoch, opt.epochs):
         training_one_epoch(model=model, optimizer=optimizer, criterion=criterion, scheduler=scheduler,
                            dataloader=train_loader, device=device, epoch=epoch, opt=opt, checkpoint_dict=checkpoint_dict)
 
@@ -94,13 +105,15 @@ def main(*args, **kwargs):
             model_save_name = os.path.join(save_dir, f"best_model.pt")
             torch.save(checkpoint_dict, model_save_name)
 
+        # last save model
+        last_model_save_name = os.path.join(save_dir, f"last_model.pt")
+        torch.save(checkpoint_dict, last_model_save_name)
+
         plot.plot_save(checkpoint_dict=checkpoint_dict,
                        best_epoch=best_epoch,
                        best_valid_trans=best_valid_trans,
                        best_valid_rotate=best_valid_rotate,
-                       best_valid_loss=best_valid_loss,
-                       save_dir=save_dir)
-
+                       best_valid_loss=best_valid_loss)
 
 def training_one_epoch(*args, **kwargs):
     model = kwargs["model"]
@@ -143,7 +156,6 @@ def training_one_epoch(*args, **kwargs):
         else:
             output = model(frame)
 
-
         loss = criterion(t_pred=output[:, :3], t_gt=gt_pose[:, :3],
                          q_pred=output[:, 3:], q_gt=gt_pose[:, 3:])
 
@@ -174,7 +186,8 @@ def training_one_epoch(*args, **kwargs):
         gt_pose_list.extend(gt_pose[:, :3])
         pred_pose_list.extend(output[:, :3])
 
-    pose_ploting(pred_pose_list, gt_pose_list, epoch, save_dir, mode="train")
+
+    # pose_ploting(pred_pose_list, gt_pose_list, epoch, save_dir, mode="train")
     print("*****************************************************************")
     print(f"Epoch {epoch} Total Training Loss : {np.mean(loss_list)}")
     target_poses = np.asarray(target_poses)
@@ -237,7 +250,7 @@ def validation_one_epoch(*args, **kwargs):
     pred_poses = np.asarray(pred_poses)
     target_poses = np.asarray(target_poses)
 
-    pose_ploting(pred_poses[:, :3], target_poses[:, :3], epoch, save_dir, mode="valid")
+    # pose_ploting(pred_poses[:, :3], target_poses[:, :3], epoch, save_dir, mode="valid")
     t_loss = np.asarray([t_criterion(p, t) for p, t in zip(pred_poses[:, :3], target_poses[:, :3])])
     q_loss = np.asarray([q_criterion(p, t) for p, t in zip(pred_poses[:, 3:], target_poses[:, 3:])])
 

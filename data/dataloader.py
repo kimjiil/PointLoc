@@ -4,8 +4,55 @@ from torch.utils import data
 import numpy as np
 import torch.nn.functional as F
 import glob
-from utils.quaternions import process_poses, qlog
+from utils.quaternions import process_poses, qlog, qexp
 
+import cv2
+def get_scan_data(scan_path):
+    with open(scan_path, 'r', encoding='utf-8') as txt_f:
+        lines = txt_f.readlines()
+        angle_min = float(lines[1].split(" ")[-1].replace("\n", ""))
+        angle_max = float(lines[2].split(" ")[-1].replace("\n", ""))
+        angle_step = float(lines[3].split(" ")[-1].replace("\n", ""))
+        global_pose = [float(s.replace(",", "").replace("\n", "")) for s in lines[6].split(" ")[-3:]]
+        distance = [float(s.replace(",", "").replace(" ", "")) for s in lines[8].split(" ") if len(s) > 1]
+
+        angles_arr = [angle_min + angle_step * i for i in range(len(distance))]
+        coordinates = [[d * np.cos(rad), d * np.sin(rad), 0] for rad, d in zip(angles_arr, distance) if not np.isinf(d)]
+
+        # translation = [global_pose[0], global_pose[1], 0]
+        rad = np.radians(global_pose[2])
+        q_v = np.array([np.cos(rad / 2), 0, 0, np.sin(rad / 2)])  # quaternion vector
+        q_v *= np.sign(q_v[0])
+        q_v = qlog(q_v)
+
+    return np.asanyarray(coordinates).T, [global_pose[0], global_pose[1], 0.0, *q_v]
+
+class SyswinTestDataset(data.Dataset):
+    def __init__(self, root, transform=None):
+        self.root = root
+        self.transform = transform
+
+        self.frames = []
+        self.poses = []
+
+        scan_data_list = glob.glob(os.path.join(self.root, "*_scan.txt"))
+        self.image_list = glob.glob(os.path.join(self.root, "*_color.png"))
+        for scan_data in scan_data_list:
+            lidar_data, pose = get_scan_data(scan_data)
+            self.frames.append(lidar_data)
+            self.poses.append(pose)
+
+        self.poses = np.asanyarray(self.poses)
+    def __getitem__(self, idx):
+        frame = self.frames[idx]
+        pose = self.poses[idx]
+        img = cv2.imread(self.image_list[idx])
+        if self.transform is not None:
+            frame = self.transform(frame)
+
+        return frame, pose, img
+    def __len__(self):
+        return len(self.framse)
 
 class SyswinDataset(data.Dataset):
     def __init__(self, root, train=True, transform=None):
@@ -25,31 +72,11 @@ class SyswinDataset(data.Dataset):
         for seq in seqs:
             scan_data_list = glob.glob(os.path.join(seq, "*_scan.txt"))
             for scan_data in scan_data_list:
-                lidar_data, pose = self.get_scan_data(scan_data)
+                lidar_data, pose = get_scan_data(scan_data)
                 self.frames.append(lidar_data)
                 self.poses.append(pose)
 
         self.poses = np.asanyarray(self.poses)
-
-    def get_scan_data(self, scan_path):
-        with open(scan_path, 'r', encoding='utf-8') as txt_f:
-            lines = txt_f.readlines()
-            angle_min = float(lines[1].split(" ")[-1].replace("\n", ""))
-            angle_max = float(lines[2].split(" ")[-1].replace("\n", ""))
-            angle_step = float(lines[3].split(" ")[-1].replace("\n", ""))
-            global_pose = [float(s.replace(",", "").replace("\n", "")) for s in lines[6].split(" ")[-3:]]
-            distance = [float(s.replace(",", "").replace(" ", "")) for s in lines[8].split(" ") if len(s) > 1]
-
-            angles_arr = [angle_min + angle_step * i for i in range(len(distance))]
-            coordinates = [[d * np.cos(rad), d * np.sin(rad), 0] for rad, d in zip(angles_arr, distance) if not np.isinf(d)]
-
-            # translation = [global_pose[0], global_pose[1], 0]
-            rad = np.radians(global_pose[2])
-            q_v = np.array([np.cos(rad / 2), 0, 0, np.sin(rad / 2)]) #quaternion vector
-            q_v *= np.sign(q_v[0])
-            q_v = qlog(q_v)
-
-        return np.asanyarray(coordinates).T, [global_pose[0], global_pose[1], 0.0, *q_v]
 
     def __len__(self):
         return len(self.poses)
@@ -62,6 +89,7 @@ class SyswinDataset(data.Dataset):
             frame = self.transform(frame)
 
         return frame, pose, np.zeros((3, 3))
+
 
 class vReLocDataset(data.Dataset):
     def __init__(self, root, train=True, transform=None):
