@@ -63,11 +63,13 @@ class RandomTranslation(object):
         return translated_point_cloud.T
 
 class RandomSamplingRatio(object):
-    def __init__(self, ratio=0.1):
-        self.ratio = ratio
+    def __init__(self, min_ratio=0.8, max_ratio=1.0):
+        self.min_ratio = min_ratio
+        self.max_ratio = max_ratio
 
     def __call__(self, point_cloud):
-        num_points_to_select = int(point_cloud.shape[1] * self.ratio)
+        ratio = np.random.uniform(self.max_ratio, self.max_ratio)
+        num_points_to_select = int(point_cloud.shape[1] * ratio)
         selected_indices = np.random.choice(point_cloud.shape[1], num_points_to_select, replace=False)
         selected_point_cloud = point_cloud[:, selected_indices]
 
@@ -100,7 +102,7 @@ def get_valid_transforms_vReLoc():
 def get_train_transforms_syswin():
     tf = transforms.Compose([
         RandomSampling(750),
-        # RandomSamplingRatio(ratio=0.9),
+        RandomSamplingRatio(min_ratio=0.8, max_ratio=1.0),
         Randomjitter(sigma=0.01, clip=0.05),
         # RandomRotation(),
         # RandomTranslation(),

@@ -31,12 +31,18 @@ def main(*args, **kwargs):
     best_epoch = 0
 
     if opt.resume:
-        state_dict = torch.load(os.path.join(opt.resume, 'best_model.pt'), map_location=device)
+        state_dict = torch.load(os.path.join(opt.resume, 'last_model.pt'), map_location=device)
         epoch = state_dict['epoch'] + 1
         save_dir = opt.resume
         current_time = datetime.now().strftime("%Y_%m%d_%H%M_%S")
         file_name = os.path.join(save_dir, f"logs_{current_time}.txt")
         sys.stdout = DualOutput(file_name)
+        if not 'best_epoch' in state_dict:
+            best_state_dict = torch.load(os.path.join(opt.resume, 'best_model.pt'), map_location=device)
+            state_dict['best_epoch'] = best_state_dict['epoch']
+            state_dict['best_valid_rotate'] = best_state_dict['valid_rotation_error']
+            state_dict['best_valid_trans'] = best_state_dict['valid_translation_error']
+            state_dict['best_valid_loss'] = best_state_dict['valid_loss']
         best_epoch = state_dict['best_epoch']
         best_valid_rotate = state_dict['best_valid_rotate']
         best_valid_trans = state_dict['best_valid_trans']
