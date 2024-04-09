@@ -25,6 +25,10 @@ def main(*args, **kwargs):
 
     device = f"cuda:{opt.gpu_id}" if torch.cuda.is_available() else "cpu"
     epoch = 0
+    best_valid_loss = 1000
+    best_valid_rotate = 360
+    best_valid_trans = 20
+    best_epoch = 0
 
     if opt.resume:
         state_dict = torch.load(os.path.join(opt.resume, 'best_model.pt'), map_location=device)
@@ -33,6 +37,10 @@ def main(*args, **kwargs):
         current_time = datetime.now().strftime("%Y_%m%d_%H%M_%S")
         file_name = os.path.join(save_dir, f"logs_{current_time}.txt")
         sys.stdout = DualOutput(file_name)
+        best_epoch = state_dict['best_epoch']
+        best_valid_rotate = state_dict['best_valid_rotate']
+        best_valid_trans = state_dict['best_valid_trans']
+        best_valid_loss = state_dict['best_valid_loss']
     else:
         current_time = datetime.now().strftime("%Y_%m%d_%H%M_%S")
         os.makedirs("./results", exist_ok=True)
@@ -81,10 +89,6 @@ def main(*args, **kwargs):
 
 
 
-    best_valid_loss = 1000
-    best_valid_rotate = 360
-    best_valid_trans = 20
-    best_epoch = 0
     checkpoint_dict = defaultdict()
     for epoch in range(epoch, opt.epochs):
         training_one_epoch(model=model, optimizer=optimizer, criterion=criterion, scheduler=scheduler,
@@ -101,6 +105,11 @@ def main(*args, **kwargs):
             best_valid_rotate = checkpoint_dict['valid_rotation_error']
             best_valid_trans = checkpoint_dict['valid_translation_error']
             best_epoch = checkpoint_dict['epoch']
+
+            checkpoint_dict['best_valid_loss'] = best_valid_loss
+            checkpoint_dict['best_valid_rotate'] = best_valid_rotate
+            checkpoint_dict['best_valid_trans'] = best_valid_trans
+            checkpoint_dict['best_epoch'] = best_epoch
 
             model_save_name = os.path.join(save_dir, f"best_model.pt")
             torch.save(checkpoint_dict, model_save_name)
