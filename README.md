@@ -13,4 +13,4 @@ dataset
 
 ## Demo
 
-[poinloc_onlyscan.avi](etc%2Fpoinloc_onlyscan.avi)
+![poinloc_onlyscan.gif](etc%2Fpoinloc_onlyscan.gif)
