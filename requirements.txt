@@ -1,0 +1,9 @@
+matplotlib==3.8.0
+numpy==1.26.4
+open3d==0.18.0
+opencv_python==4.9.0.80
+scipy==1.11.4
+setuptools==68.2.2
+torch==2.2.1
+torchvision==0.17.1
+transforms3d==0.4.1

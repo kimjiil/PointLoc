@@ -16,7 +16,7 @@ from data.transforms import get_valid_transforms_syswin
 
 from utils.quaternions import qexp
 
-
+import time
 
 data_path = r"C:\Users\jikim\Desktop\working_temp\2024_0409_1514_53".replace("\\", '/')
 
@@ -57,13 +57,13 @@ def update(val):
     point_cloud, gt_pose, img = valid_dataset[current_index]
     point_cloud = point_cloud.unsqueeze(0).contiguous()
     point_cloud = point_cloud.to(device)
+    s_t = time.time()
     pred_pose = model(point_cloud)
-
+    print(time.time() - s_t)
     gt_pose_np = gt_pose
     pred_pose_np = pred_pose.detach().cpu().numpy()[0]
 
     gt_angle = np.rad2deg(np.arcsin(qexp(gt_pose_np[3:])[-1]) * 2)
-    # theta = np.rad2deg(np.arctan2( qexp(gt_pose_np[3:])[-1], qexp(gt_pose_np[3:])[0]  ))
     pred_angle = np.rad2deg(np.arcsin(qexp(pred_pose_np[3:])[-1]) * 2)
 
     gt_translation = gt_pose_np[:3]
@@ -117,18 +117,8 @@ def toggle_animation(butten_press):
 def animate(frame):
     slider.set_val((slider.val + 1) % len(scan_list))
 
-#
+
 scan_list = glob.glob(os.path.join(data_path, "*scan.txt"))
-# img_list = glob.glob(os.path.join(data_path, "*color.png"))
-#
-# loaded_coord = []
-# loaded_global_pose = []
-# loaded_global_coord = []
-# for scan_path in scan_list:
-#     coordinates, global_pose, global_coordinates = parsing_scan_data(scan_path)
-#     loaded_coord.append(coordinates)
-#     loaded_global_pose.append(global_pose)
-#     loaded_global_coord.append(global_coordinates)
 
 fig, (ax1) = plt.subplots(1, 1, figsize=(7, 7))
 

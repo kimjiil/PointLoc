@@ -7,18 +7,13 @@ from data.transforms import get_train_transforms_vReLoc, get_valid_transforms_vR
 from torch.autograd import profiler
 
 from utils.quaternions import qexp, quaternion_angular_error
-from utils.tools import Options, Ploting, DualOutput, pose_ploting
+from utils.tools import Options, Ploting, DualOutput
 
 import numpy as np
 from itertools import chain
 import os, sys
 from datetime import datetime
 from collections import defaultdict
-
-import gc
-import matplotlib.pyplot as plt
-
-
 
 def main(*args, **kwargs):
     opt = Options().parse_args()
@@ -202,7 +197,7 @@ def training_one_epoch(*args, **kwargs):
         pred_pose_list.extend(output[:, :3])
 
 
-    # pose_ploting(pred_pose_list, gt_pose_list, epoch, save_dir, mode="train")
+
     print("*****************************************************************")
     print(f"Epoch {epoch} Total Training Loss : {np.mean(loss_list)}")
     target_poses = np.asarray(target_poses)
@@ -265,7 +260,6 @@ def validation_one_epoch(*args, **kwargs):
     pred_poses = np.asarray(pred_poses)
     target_poses = np.asarray(target_poses)
 
-    # pose_ploting(pred_poses[:, :3], target_poses[:, :3], epoch, save_dir, mode="valid")
     t_loss = np.asarray([t_criterion(p, t) for p, t in zip(pred_poses[:, :3], target_poses[:, :3])])
     q_loss = np.asarray([q_criterion(p, t) for p, t in zip(pred_poses[:, 3:], target_poses[:, 3:])])
 
@@ -277,8 +271,6 @@ def validation_one_epoch(*args, **kwargs):
     checkpoint_dict['valid_translation_error'] = np.mean(t_loss)
     checkpoint_dict['valid_rotation_error'] = np.mean(q_loss)
     checkpoint_dict['valid_loss'] = np.mean(loss_list)
-
-
 
 
 if __name__ == '__main__':
