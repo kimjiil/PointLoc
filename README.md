@@ -13,4 +13,4 @@ dataset
 
 ## Demo
 
-![poinloc_onlyscan.gif](etc%2Fpoinloc_onlyscan.gif)
+<img src="etc%2Fpoinloc_onlyscan.gif" width="500" height="500"/>
