@@ -24,6 +24,26 @@ https://stackoverflow.com/questions/72988735/replacing-thc-thc-h-module-to-aten-
 
 ## dataset
 vReLoc dataset : https://github.com/loveoxford/vReLoc
+```shell
+$pointloc
+├── dataset
+│   └── vReLoc
+│       └── full
+│           ├── TestSplit.txt
+│           ├── TrainSplit.txt
+│           ├── seq-01
+│           │   ├── frame-000000.bin
+│           │   ├── frame-000000.color.png
+│           │   ├── frame-000000.pose.txt
+│           │   ├── ...
+│           ├── seq-02
+│           │   ├── frame-000000.bin
+│           │   ├── frame-000000.color.png
+│           │   ├── frame-000000.pose.txt
+│           ├── ...
+```
+
+
 
 ## Training
 
